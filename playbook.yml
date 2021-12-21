@@ -1,0 +1,61 @@
+---
+- hosts: all
+  become: true
+
+  handlers:
+    - name: restart sshd
+      service:
+        name: sshd
+        state: restarted
+
+  vars_files:
+    - vars.yml
+
+  tasks:
+    - name: Install Software Updates.
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    # Seeting the host will not work with Vagrant
+    # You need to set this line in Vagrantfile
+    # config.vm.hostname = "node01"
+
+    # - name: Set the Hostname.
+    #   hostname:
+    #     name: '{{ hostname }}'
+    - name: Set the Timezone.
+      timezone:
+        name: '{{ timezone }}'
+    - name: Add a Limited User Account.
+      user:
+        name: '{{ username }}'
+        group: sudo
+        state: present
+    - name: Disallow root logins over SSH.
+      lineinfile:
+        path: '/etc/ssh/sshd_config'
+        line: 'PermitRootLogin no'
+        state: present
+      notify:
+        - restart sshd
+    - name: Disable SSH password authentication.
+      lineinfile:
+        path: '/etc/ssh/sshd_config'
+        line: 'PasswordAuthentication no'
+        state: present
+      notify:
+        - restart sshd
+    - name: Install Fail2ban.
+      apt: pkg=fail2ban state=present
+    - name: Allow SSH in UFW.
+      ufw: rule=allow port=22
+    - name: Copy fail2ban local config
+      copy:
+        src: ./fail2ban.conf
+        dest: /etc/fail2ban/jail.local
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Reboot the machine.
+      reboot:

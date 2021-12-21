@@ -1,0 +1,5 @@
+---
+# Variables for our app.
+hostname: node01
+timezone: Asia/Tokyo
+username: nioperas06
